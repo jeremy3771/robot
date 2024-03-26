@@ -12,13 +12,10 @@ find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 
-add_executable(go_rot src/go_rot.cpp)
-ament_target_dependencies(go_rot rclcpp std_msgs geometry_msgs)
 add_executable(go_scan src/go_scan.cpp)
 ament_target_dependencies(go_scan rclcpp std_msgs geometry_msgs sensor_msgs)
 
 install(TARGETS
-  go_rot
   go_scan
   DESTINATION lib/${PROJECT_NAME})
 
