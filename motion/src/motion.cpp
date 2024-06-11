@@ -37,38 +37,18 @@ public:
     odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
         "odom", 1, std::bind(&GoToPose::odom_cb, this, _1));
     goal_pose_[0][0] = 3.0;
-    goal_pose_[0][1] = 0;
-    goal_pose_[0][2] = 0;
-    goal_pose_[0][3] = 0;
-    goal_pose_[0][4] = 0;
-    goal_pose_[0][5] = 0;
-
+    goal_pose_[0][1] = (W1_ == 1) ? -0.5 : 0.5;
     goal_pose_[1][0] = 6.0;
-    goal_pose_[1][1] = 0;
-    goal_pose_[1][2] = 0;
-    goal_pose_[1][3] = 0;
-    goal_pose_[1][4] = 0;
-    goal_pose_[1][5] = 0;
-
     goal_pose_[2][0] = 9.0;
-    goal_pose_[2][1] = 0;
-    goal_pose_[2][2] = 0;
-    goal_pose_[2][3] = 0;
-    goal_pose_[2][4] = 0;
-    goal_pose_[2][5] = 0;
-
+    goal_pose_[2][1] = (W2_ == 1) ? -0.5 : 0.5;
     goal_pose_[3][0] = 12.0;
-    goal_pose_[3][1] = 0;
-    goal_pose_[3][2] = 0;
-    goal_pose_[3][3] = 0;
-    goal_pose_[3][4] = 0;
-    goal_pose_[3][5] = 0;
 
-    if (W1_ == 1) goal_pose_[0][1] = -0.5;
-    else  goal_pose_[0][1] = 0.5;
-
-    if (W2_ == 1) goal_pose_[2][1] = -0.5;
-    else  goal_pose_[2][1] = 0.5;
+    for (int i = 0; i < 4; ++i) {
+      goal_pose_[i][2] = 0.0;
+      goal_pose_[i][3] = 0.0;
+      goal_pose_[i][4] = 0.0;
+      goal_pose_[i][5] = 0.0;
+    }
   }
 private:
   void timer_cb() {
@@ -80,25 +60,22 @@ private:
       double dx = goal_pose_[step][0] - cur_pose_[0];
       double dy = goal_pose_[step][1] - cur_pose_[1];
       double dist = sqrt(dx*dx + dy*dy);
-      double theta = atan(dy/dx);
-      if(dx < 0) theta += PI;
-      if(theta > PI) theta -= 2*PI;
-      if(theta < -PI) theta += 2*PI;
+      double theta = atan2(dy, dx);
 
       double alpha = theta - cur_pose_[5];
       double beta = goal_pose_[step][5] - theta;
-      if(alpha > PI) alpha -= 2*PI;
-      if(alpha < -PI) alpha += 2*PI;
-      if(beta > PI) beta -= 2*PI;
-      if(beta < -PI) beta += 2*PI;
+      if(alpha > PI) alpha -= 2 * PI;
+      if(alpha < -PI) alpha += 2 * PI;
+      if(beta > PI) beta -= 2 * PI;
+      if(beta < -PI) beta += 2 * PI;
       RCLCPP_INFO(get_logger()
         , "dist = %lf, theta = %lf, alpha = %lf, beta = %lf pi\n"
         , dist, theta/PI, alpha/PI, beta/PI);
-      double vel = kr_*dist;
-      double omega = ka_*alpha - kb_*beta;
-      double omax = vel*tan(dmax_)/0.3;
-      if(omega > omax) omega = omax;
-      if(omega < -omax) omega = -omax;
+      double vel = kr_ * dist;
+      double omega = ka_ * alpha - kb_ * beta;
+      double omax = vel * tan(dmax_) / 0.3;
+      
+      omega = std::clamp(omega, -omax, omax);
 
       auto cmd = geometry_msgs::msg::Twist();
       cmd.linear.x = vel;
@@ -127,8 +104,8 @@ private:
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr pub_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
-  double cur_pose_[6];
-  double goal_pose_[4][6];
+  double cur_pose_[6] = {0};
+  double goal_pose_[4][6] = {0};
   int W1_, W2_;
   double kr_, ka_, kb_, dmax_;
   int step = 0;
