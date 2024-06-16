@@ -19,7 +19,7 @@ public:
     declare_parameter("kr", 0.6);
     declare_parameter("ka", 0.8);
     declare_parameter("kb", 0.2);
-    declare_parameter("dmax", 0.45);
+    declare_parameter("dmax", 0.4);
     declare_parameter("W1", 1);
     declare_parameter("W2", 2);
     get_parameter("kr", kr_);
@@ -36,26 +36,26 @@ public:
         100ms, std::bind(&GoToPose::timer_cb, this));
     odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
         "odom", 1, std::bind(&GoToPose::odom_cb, this, _1));
-    goal_pose_[0][0] = 3.0;
+    goal_pose_[0][0] = 2.5;
     goal_pose_[0][1] = (W1_ == 1) ? -0.5 : 0.5;
-    goal_pose_[1][0] = 6.0;
-    goal_pose_[2][0] = 9.0;
+    goal_pose_[1][0] = 5.0;
+    goal_pose_[2][0] = 7.5;
     goal_pose_[2][1] = (W2_ == 1) ? -0.5 : 0.5;
-    goal_pose_[3][0] = 12.0;
+    goal_pose_[3][0] = 10.0;
 
     for (int i = 0; i < 4; ++i) {
       goal_pose_[i][2] = 0.0;
       goal_pose_[i][3] = 0.0;
       goal_pose_[i][4] = 0.0;
       goal_pose_[i][5] = 0.0;
-    }
+ 	    }
   }
 private:
   void timer_cb() {
     if (step < 4) {
       RCLCPP_INFO(get_logger()
-        , "x = %lf, y = %lf, yaw = %lf pi\n"
-        , cur_pose_[0], cur_pose_[1], cur_pose_[5]/PI);
+        , "x = %lf, y = %lf, yaw = %lf deg\n"
+        , cur_pose_[0], cur_pose_[1], cur_pose_[5] / PI * 180);
 
       double dx = goal_pose_[step][0] - cur_pose_[0];
       double dy = goal_pose_[step][1] - cur_pose_[1];
@@ -69,20 +69,22 @@ private:
       if(beta > PI) beta -= 2 * PI;
       if(beta < -PI) beta += 2 * PI;
       RCLCPP_INFO(get_logger()
-        , "dist = %lf, theta = %lf, alpha = %lf, beta = %lf pi\n"
-        , dist, theta/PI, alpha/PI, beta/PI);
+        , "dist = %lf, theta = %lf deg, alpha = %lf deg, beta = %lf deg\n"
+        , dist, theta / PI * 180, alpha / PI * 180, beta / PI * 180);
       double vel = kr_ * dist;
+      vel = std::clamp(vel, -0.2, 0.2);
       double omega = ka_ * alpha - kb_ * beta;
       double omax = vel * tan(dmax_) / 0.3;
       
-      omega = std::clamp(omega, -omax, omax);
+      if (omega < -omax) omega = -omax;
+      else if (omega > omax) omega = omax;
 
       auto cmd = geometry_msgs::msg::Twist();
       cmd.linear.x = vel;
       cmd.angular.z = omega;
       pub_->publish(cmd);
 
-      if (dist < 0.1) step++;
+      if (dist < 0.05) step++;
     }
     else {
       auto cmd = geometry_msgs::msg::Twist();
