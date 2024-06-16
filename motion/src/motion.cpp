@@ -41,7 +41,7 @@ public:
     goal_pose_[1][0] = 5.0;
     goal_pose_[2][0] = 7.5;
     goal_pose_[2][1] = (W2_ == 1) ? -0.5 : 0.5;
-    goal_pose_[3][0] = 10.0;
+    goal_pose_[3][0] = 10.3;
 
     for (int i = 0; i < 4; ++i) {
       goal_pose_[i][2] = 0.0;
